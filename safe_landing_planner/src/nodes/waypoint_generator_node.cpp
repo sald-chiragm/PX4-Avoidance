@@ -20,10 +20,12 @@ WaypointGeneratorNode::WaypointGeneratorNode(const ros::NodeHandle &nh) : nh_(nh
   trajectory_pub_ = nh_.advertise<mavros_msgs::Trajectory>("/mavros/trajectory/generated", 10);
   land_hysteresis_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/land_hysteresis", 1);
   marker_goal_pub_ = nh_.advertise<visualization_msgs::Marker>("/goal_position", 1);
+  setpoint_raw_pub_ = nh_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local",10);
 
   waypointGenerator_.publishTrajectorySetpoints_ = [this](const Eigen::Vector3f &pos_sp, const Eigen::Vector3f &vel_sp,
                                                           float yaw_sp, float yaw_speed_sp) {
-    publishTrajectorySetpoints(pos_sp, vel_sp, yaw_sp, yaw_speed_sp);
+    // publishTrajectorySetpoints(pos_sp, vel_sp, yaw_sp, yaw_speed_sp);
+    publishTargetRawSetpoints(pos_sp, vel_sp, yaw_sp, yaw_speed_sp);
   };
 }
 
@@ -70,14 +72,15 @@ void WaypointGeneratorNode::positionCallback(const geometry_msgs::PoseStamped &m
   tf::Matrix3x3 mat(q);
   mat.getRPY(roll, pitch, yaw);
   waypointGenerator_.yaw_ = static_cast<float>(yaw);
-  ROS_INFO("[WGN] Current position %f %f %f", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
+  // ROS_INFO("[WGN] Current position %f %f %f", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
 }
 
 void WaypointGeneratorNode::trajectoryCallback(const mavros_msgs::Trajectory &msg) {
   bool update = ((avoidance::toEigen(msg.point_2.position) - goal_visualization_).norm() > 0.01) ||
                 waypointGenerator_.goal_.topRows<2>().array().hasNaN();
 
-  if (update && msg.point_valid[0] == true) {
+  if (update && msg.point_valid[0] == true) 
+  {
     waypointGenerator_.goal_ = avoidance::toEigen(msg.point_1.position);
     waypointGenerator_.velocity_setpoint_ = avoidance::toEigen(msg.point_1.velocity);
     waypointGenerator_.is_land_waypoint_ = (msg.command[1] == static_cast<int>(MavCommand::MAV_CMD_NAV_LAND));
@@ -92,9 +95,9 @@ void WaypointGeneratorNode::trajectoryCallback(const mavros_msgs::Trajectory &ms
 }
 
 void WaypointGeneratorNode::stateCallback(const mavros_msgs::State &msg) {
-  if (msg.mode == "AUTO.LAND") {
+  if (msg.mode == "LAND") {
     waypointGenerator_.is_land_waypoint_ = true;
-  } else if (msg.mode == "AUTO.MISSION") {
+  } else if (msg.mode == "AUTO") {
     // is_land_waypoint_ is set trought the mission item type
   } else {
     waypointGenerator_.is_land_waypoint_ = false;
@@ -128,9 +131,30 @@ void WaypointGeneratorNode::gridCallback(const safe_landing_planner::SLPGridMsg 
   grid_received_ = true;
 }
 
+void WaypointGeneratorNode::publishTargetRawSetpoints(const Eigen::Vector3f &pos_sp, const Eigen::Vector3f &vel_sp,
+                                                       float yaw_sp, float yaw_speed_sp) {
+  mavros_msgs::PositionTarget setpoint;
+  setpoint.header.stamp = ros::Time::now();
+  setpoint.header.frame_id = "local_origin";
+  setpoint.position.x = pos_sp.x();
+  setpoint.position.y = pos_sp.y();
+  setpoint.position.z = pos_sp.z();
+  setpoint.velocity.x = vel_sp.x();
+  setpoint.velocity.y = vel_sp.y();
+  setpoint.velocity.z = vel_sp.z();
+  setpoint.acceleration_or_force.x = NAN;
+  setpoint.acceleration_or_force.y = NAN;
+  setpoint.acceleration_or_force.z = NAN;
+  setpoint.yaw = yaw_sp;
+  setpoint.yaw_rate = yaw_speed_sp;
+
+  setpoint_raw_pub_.publish(setpoint);
+}
+
 void WaypointGeneratorNode::publishTrajectorySetpoints(const Eigen::Vector3f &pos_sp, const Eigen::Vector3f &vel_sp,
                                                        float yaw_sp, float yaw_speed_sp) {
   mavros_msgs::Trajectory setpoint;
+  mavros_msgs::PositionTarget target_pose;
   setpoint.header.stamp = ros::Time::now();
   setpoint.header.frame_id = "local_origin";
   setpoint.type = 0;  // MAV_TRAJECTORY_REPRESENTATION::WAYPOINTS

@@ -9,3 +9,5 @@
 coverage_html/*
 repo_total.info
 */build/*
+.vscode
+log

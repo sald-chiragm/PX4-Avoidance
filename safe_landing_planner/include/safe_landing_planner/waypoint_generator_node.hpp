@@ -10,6 +10,7 @@
 #include <std_msgs/Int64MultiArray.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <geometry_msgs/Point.h>
 
 #include <dynamic_reconfigure/server.h>
 #include <safe_landing_planner/SLPGridMsg.h>
@@ -49,6 +50,7 @@ class WaypointGeneratorNode final {
   ros::Publisher trajectory_pub_;
   ros::Publisher land_hysteresis_pub_;
   ros::Publisher marker_goal_pub_;
+  ros::Publisher setpoint_raw_pub_;
 
   bool grid_received_ = false;
   double spin_dt_ = 0.1;
@@ -102,7 +104,10 @@ class WaypointGeneratorNode final {
   **/
   void publishTrajectorySetpoints(const Eigen::Vector3f& pos_sp, const Eigen::Vector3f& vel_sp, float yaw_sp,
                                   float yaw_speed_sp);
-
+  
+  void publishTargetRawSetpoints(const Eigen::Vector3f& pos_sp, const Eigen::Vector3f& vel_sp, float yaw_sp,
+                                  float yaw_speed_sp);
+  
   /**
   * @brief     fills unused waypoints with NANs
   * @param[in] point, unused waypoints

@@ -117,7 +117,9 @@
       <uri>model://oak_tree</uri>
       <pose>16 30 1.6 0.15 0 0</pose>
     </include>
-
+  <include>
+      <uri>model://iris_downward_depth_camera</uri>
+    </include>
 
   </world>
 </sdf>

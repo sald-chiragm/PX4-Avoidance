@@ -21,8 +21,7 @@
       <param name="world_name" value="$(find avoidance)/sim/worlds/$(arg world_file_name).yaml" />
     </node>
 
-    <node name="waypoint_generator_node" pkg="safe_landing_planner" type="waypoint_generator_node" output="screen" >
-    </node>
+    <node name="waypoint_generator_node" pkg="safe_landing_planner" type="waypoint_generator_node" output="screen" />
 
     <node name="dynparam_slpn" pkg="dynamic_reconfigure" type="dynparam" args="load safe_landing_planner_node $(find safe_landing_planner)/cfg/slpn.yaml" />
     <node name="dynparam_wpgn" pkg="dynamic_reconfigure" type="dynparam" args="load waypoint_generator_node $(find safe_landing_planner)/cfg/wpgn.yaml" />
