@@ -4,21 +4,24 @@
 namespace avoidance {
 
 void SafeLandingPlanner::runSafeLandingPlanner() {
-  if (size_update_) {
-    grid_.resize(grid_size_, cell_size_);
-    previous_grid_.resize(grid_size_, cell_size_);
-    n_lines_padding_ = smoothing_size_;
-    size_update_ = false;
-  }
-  if (!play_rosbag_) {
-    processPointcloud();
-  } else {
-    processRawGrid();
-  }
+  if (slp_process_){
+    if (size_update_) {
+      grid_.resize(grid_size_, cell_size_);
+      previous_grid_.resize(grid_size_, cell_size_);
+      n_lines_padding_ = smoothing_size_;
+      size_update_ = false;
+    }
 
-  // low pass filter on grid mean and variance
-  grid_.combine(previous_grid_, alpha_);
-  isLandingPossible();
+    if (!play_rosbag_) {
+      processPointcloud();
+    } else {
+      processRawGrid();
+    }
+
+    // low pass filter on grid mean and variance
+    grid_.combine(previous_grid_, alpha_);
+    isLandingPossible();
+  }
 }
 
 void SafeLandingPlanner::processPointcloud() {

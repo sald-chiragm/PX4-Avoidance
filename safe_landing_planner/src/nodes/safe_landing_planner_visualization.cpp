@@ -30,7 +30,7 @@ void SafeLandingPlannerVisualization::publishMeanStdDev(const Grid& grid, float 
 
   float cell_size = grid.getCellSize();
   visualization_msgs::Marker cell;
-  cell.header.frame_id = "local_origin";
+  cell.header.frame_id = "odom";
   cell.header.stamp = ros::Time::now();
   cell.id = 0;
   cell.type = visualization_msgs::Marker::CUBE;
@@ -130,7 +130,7 @@ void SafeLandingPlannerVisualization::publishCounter(const Grid& grid, float n_p
 
   float cell_size = grid.getCellSize();
   visualization_msgs::Marker cell;
-  cell.header.frame_id = "local_origin";
+  cell.header.frame_id = "odom";
   cell.header.stamp = ros::Time::now();
   cell.id = 0;
   cell.type = visualization_msgs::Marker::CUBE;
@@ -179,7 +179,7 @@ void SafeLandingPlannerVisualization::publishGrid(const Grid& grid, const geomet
 
   float cell_size = grid.getCellSize();
   visualization_msgs::Marker cell;
-  cell.header.frame_id = "local_origin";
+  cell.header.frame_id = "odom";
   cell.header.stamp = ros::Time::now();
   cell.id = 0;
   cell.type = visualization_msgs::Marker::CUBE;
@@ -226,7 +226,7 @@ void SafeLandingPlannerVisualization::publishGrid(const Grid& grid, const geomet
 void SafeLandingPlannerVisualization::publishPaths(const geometry_msgs::Point& pos,
                                                    const geometry_msgs::Point& last_pos) {
   visualization_msgs::Marker path_actual_marker;
-  path_actual_marker.header.frame_id = "local_origin";
+  path_actual_marker.header.frame_id = "odom";
   path_actual_marker.header.stamp = ros::Time::now();
   path_actual_marker.id = path_length_;
   path_actual_marker.type = visualization_msgs::Marker::LINE_STRIP;
