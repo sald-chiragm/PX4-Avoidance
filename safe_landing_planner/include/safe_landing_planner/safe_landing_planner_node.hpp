@@ -20,7 +20,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
-
+#include <std_srvs/SetBool.h>
 #include "safe_landing_planner.hpp"
 #include "safe_landing_planner_visualization.hpp"
 
@@ -38,7 +38,6 @@ class SafeLandingPlannerNode {
 #endif
 
   std::atomic<bool> should_exit_{false};
-
   std::thread worker_;
 
   /**
@@ -70,11 +69,12 @@ class SafeLandingPlannerNode {
   ros::Subscriber pose_sub_;
   ros::Subscriber pointcloud_sub_;
   ros::Subscriber raw_grid_sub_;
+  ros::ServiceServer planner_service_;
 
   tf::TransformListener tf_listener_;
 
   geometry_msgs::PoseStamped current_pose_;
-  geometry_msgs::PoseStamped previous_pose_;
+  geometry_msgs::PoseStamped previous_pose_;  
   mavros_msgs::CompanionProcessStatus status_msg_;
 
   ros::Time start_time_ = ros::Time(0.0);
@@ -95,6 +95,9 @@ class SafeLandingPlannerNode {
   * @param[in] event, event timing information
   **/
   void cmdLoopCallback(const ros::TimerEvent& event);
+
+
+  bool plannersrvCallback(std_srvs::SetBoolRequest &req, std_srvs::SetBoolResponse &res);
 
   /**
   * @brif callback for vehicle position and orientation

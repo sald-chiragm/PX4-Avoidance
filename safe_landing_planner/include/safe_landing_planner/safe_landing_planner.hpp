@@ -21,6 +21,8 @@ class SafeLandingPlanner {
   pcl::PointCloud<pcl::PointXYZ> cloud_;
   pcl::PointCloud<pcl::PointXYZI> visualization_cloud_;
 
+  std::atomic<bool> slp_process_ {false};
+
   double timeout_critical_ = 0.5;
   double timeout_termination_ = 15.0;
 

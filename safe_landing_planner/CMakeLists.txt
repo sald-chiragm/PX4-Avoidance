@@ -26,7 +26,7 @@ if(DISABLE_SIMULATION)
 endif()
 
 ## Generate messages in the 'msg' folder
-add_message_files(FILES SLPGridMsg.msg)
+add_message_files(FILES SLP_Evaluate.msg SLPGridMsg.msg)
 generate_messages(
   DEPENDENCIES
   std_msgs
