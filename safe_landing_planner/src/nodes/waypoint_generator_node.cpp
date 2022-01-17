@@ -14,13 +14,14 @@ WaypointGeneratorNode::WaypointGeneratorNode(const ros::NodeHandle &nh) : nh_(nh
   pose_sub_ = nh_.subscribe<const geometry_msgs::PoseStamped &>("/mavros/local_position/pose", 1,
                                                                 &WaypointGeneratorNode::positionCallback, this);
   trajectory_sub_ = nh_.subscribe("/mavros/trajectory/desired", 1, &WaypointGeneratorNode::trajectoryCallback, this);
-  state_sub_ = nh_.subscribe("/mavros/state", 1, &WaypointGeneratorNode::stateCallback, this);
+  state_sub_ = nh_.subscribe("/aim/state", 1, &WaypointGeneratorNode::stateCallback, this);
   grid_sub_ = nh_.subscribe("/grid_slp", 1, &WaypointGeneratorNode::gridCallback, this);
 
   trajectory_pub_ = nh_.advertise<mavros_msgs::Trajectory>("/mavros/trajectory/generated", 10);
   land_hysteresis_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("/land_hysteresis", 1);
   marker_goal_pub_ = nh_.advertise<visualization_msgs::Marker>("/goal_position", 1);
   setpoint_raw_pub_ = nh_.advertise<mavros_msgs::PositionTarget>("/mavros/setpoint_raw/local",10);
+  slp_decision_pub_ = nh_.advertise<safe_landing_planner::SLP_Evaluate>("/slp/evaluate", 1);
 
   waypointGenerator_.publishTrajectorySetpoints_ = [this](const Eigen::Vector3f &pos_sp, const Eigen::Vector3f &vel_sp,
                                                           float yaw_sp, float yaw_speed_sp) {
@@ -64,6 +65,7 @@ void WaypointGeneratorNode::dynamicReconfigureCallback(safe_landing_planner::Way
   }
 }
 
+
 void WaypointGeneratorNode::positionCallback(const geometry_msgs::PoseStamped &msg) {
   waypointGenerator_.position_ = avoidance::toEigen(msg.pose.position);
   double roll, pitch, yaw;
@@ -72,7 +74,7 @@ void WaypointGeneratorNode::positionCallback(const geometry_msgs::PoseStamped &m
   tf::Matrix3x3 mat(q);
   mat.getRPY(roll, pitch, yaw);
   waypointGenerator_.yaw_ = static_cast<float>(yaw);
-  // ROS_INFO("[WGN] Current position %f %f %f", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
+  ROS_INFO("[WGN] Current position %f %f %f", msg.pose.position.x, msg.pose.position.y, msg.pose.position.z);
 }
 
 void WaypointGeneratorNode::trajectoryCallback(const mavros_msgs::Trajectory &msg) {
@@ -95,25 +97,19 @@ void WaypointGeneratorNode::trajectoryCallback(const mavros_msgs::Trajectory &ms
 }
 
 void WaypointGeneratorNode::stateCallback(const mavros_msgs::State &msg) {
-  if (msg.mode == "LAND") {
-    waypointGenerator_.is_land_waypoint_ = true;
-  } else if (msg.mode == "AUTO") {
-    // is_land_waypoint_ is set trought the mission item type
-  } else {
-    waypointGenerator_.is_land_waypoint_ = false;
-    waypointGenerator_.trigger_reset_ = true;
-  }
-
-  if (msg.armed == false) {
-    waypointGenerator_.is_land_waypoint_ = false;
-    waypointGenerator_.trigger_reset_ = true;
-  }
+  if (msg.mode == "SLP_EVALUATION") 
+  {
+    safe_landing_planner::SLP_Evaluate evaluation_msg;
+    evaluation_msg.can_land = waypointGenerator_.can_land_;
+    evaluation_msg.within_landing_radius = waypointGenerator_.within_landing_radius_;
+    slp_decision_pub_.publish(evaluation_msg);
+  } 
 }
 
 void WaypointGeneratorNode::gridCallback(const safe_landing_planner::SLPGridMsg &msg) {
   waypointGenerator_.grid_slp_seq_ = msg.header.seq;
-  if (waypointGenerator_.grid_slp_.getGridSize() != msg.grid_size ||
-      waypointGenerator_.grid_slp_.getCellSize() != msg.cell_size) {
+  if (waypointGenerator_.grid_slp_.getGridSize() != msg.grid_size || waypointGenerator_.grid_slp_.getCellSize() != msg.cell_size) 
+  {
     waypointGenerator_.grid_slp_.resize(msg.grid_size, msg.cell_size);
   }
 
@@ -131,11 +127,11 @@ void WaypointGeneratorNode::gridCallback(const safe_landing_planner::SLPGridMsg 
   grid_received_ = true;
 }
 
-void WaypointGeneratorNode::publishTargetRawSetpoints(const Eigen::Vector3f &pos_sp, const Eigen::Vector3f &vel_sp,
-                                                       float yaw_sp, float yaw_speed_sp) {
+void WaypointGeneratorNode::publishTargetRawSetpoints(const Eigen::Vector3f &pos_sp, const Eigen::Vector3f &vel_sp, float yaw_sp, float yaw_speed_sp) {
+  
   mavros_msgs::PositionTarget setpoint;
   setpoint.header.stamp = ros::Time::now();
-  setpoint.header.frame_id = "local_origin";
+  setpoint.header.frame_id = "odom";
   setpoint.position.x = pos_sp.x();
   setpoint.position.y = pos_sp.y();
   setpoint.position.z = pos_sp.z();
@@ -156,7 +152,7 @@ void WaypointGeneratorNode::publishTrajectorySetpoints(const Eigen::Vector3f &po
   mavros_msgs::Trajectory setpoint;
   mavros_msgs::PositionTarget target_pose;
   setpoint.header.stamp = ros::Time::now();
-  setpoint.header.frame_id = "local_origin";
+  setpoint.header.frame_id = "odom";
   setpoint.type = 0;  // MAV_TRAJECTORY_REPRESENTATION::WAYPOINTS
   setpoint.point_1.position.x = pos_sp.x();
   setpoint.point_1.position.y = pos_sp.y();
@@ -209,7 +205,7 @@ void WaypointGeneratorNode::landingAreaVisualization() {
 
   float cell_size = waypointGenerator_.grid_slp_.getCellSize();
   visualization_msgs::Marker cell;
-  cell.header.frame_id = "local_origin";
+  cell.header.frame_id = "odom";
   cell.header.stamp = ros::Time::now();
   cell.id = 0;
   cell.type = visualization_msgs::Marker::CUBE;
@@ -263,7 +259,7 @@ void WaypointGeneratorNode::landingAreaVisualization() {
 void WaypointGeneratorNode::goalVisualization() {
   visualization_msgs::Marker m;
   static int id = 0;
-  m.header.frame_id = "local_origin";
+  m.header.frame_id = "odom";
   m.header.stamp = ros::Time::now();
   m.type = visualization_msgs::Marker::SPHERE;
   m.action = visualization_msgs::Marker::ADD;

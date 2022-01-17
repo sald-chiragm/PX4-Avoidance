@@ -16,7 +16,7 @@ const std::vector<Eigen::Vector2f> exploration_pattern = {
     Eigen::Vector2f(1.f, 0.f),  Eigen::Vector2f(1.f, 1.f),   Eigen::Vector2f(0.f, 1.f),  Eigen::Vector2f(-1.f, 1.f),
     Eigen::Vector2f(-1.f, 0.f), Eigen::Vector2f(-1.f, -1.f), Eigen::Vector2f(0.f, -1.f), Eigen::Vector2f(1.f, -1.f)};
 
-enum class SLPState { GOTO, LOITER, LAND, ALTITUDE_CHANGE, EVALUATE_GRID, GOTO_LAND };
+enum class SLPState { EVALUATE_GRID, GOTO_LAND };
 std::string toString(SLPState state);  // for logging
 
 static const float LAND_SPEED = 0.7f;
@@ -49,11 +49,12 @@ class WaypointGenerator : public usm::StateMachine<SLPState> {
 
   // state
   bool trigger_reset_ = false;
-  SLPState prev_slp_state_ = SLPState::GOTO;
+  SLPState prev_slp_state_ = SLPState::EVALUATE_GRID;
 
   bool is_land_waypoint_ = false;
   bool decision_taken_ = false;
-  bool can_land_ = true;
+  bool within_landing_radius_ = false;
+  bool can_land_ = false;
   bool update_smoothing_size_ = false;
   bool explorarion_is_active_ = false;
   bool state_changed_ = false;

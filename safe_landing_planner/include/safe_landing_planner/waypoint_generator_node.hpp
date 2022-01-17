@@ -14,6 +14,7 @@
 
 #include <dynamic_reconfigure/server.h>
 #include <safe_landing_planner/SLPGridMsg.h>
+#include <safe_landing_planner/SLP_Evaluate.h>
 #include <safe_landing_planner/WaypointGeneratorNodeConfig.h>
 
 #include <safe_landing_planner/waypoint_generator.hpp>
@@ -51,6 +52,7 @@ class WaypointGeneratorNode final {
   ros::Publisher land_hysteresis_pub_;
   ros::Publisher marker_goal_pub_;
   ros::Publisher setpoint_raw_pub_;
+  ros::Publisher slp_decision_pub_;
 
   bool grid_received_ = false;
   double spin_dt_ = 0.1;
